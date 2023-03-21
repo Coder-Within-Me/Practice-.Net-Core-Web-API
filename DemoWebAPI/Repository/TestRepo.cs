@@ -1,11 +1,13 @@
 ﻿using DemoWebAPI.DataLayer;
 using DemoWebAPI.Models;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace DemoWebAPI.Repository
@@ -75,7 +77,7 @@ namespace DemoWebAPI.Repository
         {
             try
             {
-                var modeldata = await _testContext.testdata.FindAsync(testmodel.Id);
+                var modeldata = await _testContext.testdata.FindAsync(testmodel.Id); //To check whether data is available or not
                 if (modeldata != null)
                 {
                     modeldata.Name = testmodel.Name;
@@ -87,6 +89,32 @@ namespace DemoWebAPI.Repository
                     return "Please enter proper ID. Data is not available for this ID.";
                 }
 
+                // Alternate way
+                //_testContext.testdata.Update(testmodel);
+                //await _testContext.SaveChangesAsync();
+
+            }
+            catch (Exception ex)
+            {
+                return "Data not Updated. Error : " + ex;
+            }
+            return "Data updated Successfully...!";
+        }
+        
+        public async Task<string> UpdateDataPatch(int id,JsonPatchDocument testmodel)
+        {
+            try
+            {
+                var modeldata = await _testContext.testdata.FindAsync(id); //To check whether data is available or not
+                if (modeldata != null)
+                {
+                    testmodel.ApplyTo(modeldata);
+                    await _testContext.SaveChangesAsync();
+                }
+                else
+                {
+                    return "Please enter proper ID. Data is not available for this ID.";
+                }
             }
             catch (Exception ex)
             {

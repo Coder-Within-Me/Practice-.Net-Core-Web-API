@@ -29,7 +29,7 @@ namespace DemoWebAPI
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<TestContext>(options => options.UseSqlServer(Configuration.GetConnectionString("ConnectionString")));
-            services.AddControllers();
+            services.AddControllers().AddNewtonsoftJson();
             services.AddSwaggerGen();
             services.AddTransient<ITestRepo,TestRepo>();
         }

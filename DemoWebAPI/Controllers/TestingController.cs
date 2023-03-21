@@ -1,5 +1,6 @@
 ﻿using DemoWebAPI.Models;
 using DemoWebAPI.Repository;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -52,6 +53,11 @@ namespace DemoWebAPI.Controllers
         public async Task<string> UpdateData([FromBody] TestModel testmodel)
         {
             return await TestRepoObj.UpdateData(testmodel);
+        }
+        [HttpPatch("updatedataPatch/{id}")]
+        public async Task<string> UpdateDataPatch(int id,[FromBody] JsonPatchDocument testmodel)
+        {
+            return await TestRepoObj.UpdateDataPatch(id,testmodel);
         }
     }
 }
