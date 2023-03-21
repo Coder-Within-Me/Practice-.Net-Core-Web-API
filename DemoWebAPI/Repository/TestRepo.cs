@@ -1,16 +1,98 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using DemoWebAPI.DataLayer;
+using DemoWebAPI.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 
 namespace DemoWebAPI.Repository
 {
     public class TestRepo : ITestRepo
     {
-        public string GetAllData()
+        private readonly TestContext _testContext;
+        public TestRepo(TestContext context)
         {
-            return "Testing API";
+            _testContext = context;
+        }
+
+        public async Task<List<TestModel>> GetAllData()
+        {
+            return await _testContext.testdata.Select(x => new TestModel { Id = x.Id, Name = x.Name}).ToListAsync();
         }
         public string GetAllDataByName(string name)
         {
             return "Testing API " + name;
+        }        
+        public async Task<TestModel> GetAllDataById(int id)
+        {
+            return await _testContext.testdata.Where(x => x.Id == id).Select(x => new TestModel { Id = x.Id, Name = x.Name }).FirstOrDefaultAsync();
+        }
+        public async Task<string> InsertAllData(TestModel test)
+        {
+            var testData = new TestModel()
+            {
+                Name = test.Name,
+            };
+            try
+            {
+                _testContext.testdata.Add(testData);
+                await _testContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                return "Data not Inserted. Error : " + ex;
+            }
+            return "Data inserted Successfully...!";                
+        }
+        
+        public async Task<string> DeleteDataById(int id)
+        {
+            try
+            {
+                var modeldata = await _testContext.testdata.FindAsync(id);
+                if (modeldata != null)
+                {
+                    var data = await _testContext.testdata.Where(x => x.Id == id).Select(x => new TestModel { Id = x.Id, Name = x.Name }).FirstOrDefaultAsync();
+                    _testContext.testdata.Remove(data);
+                    await _testContext.SaveChangesAsync();
+                }
+                else
+                {
+                    return "Please enter proper ID. Data is not available for this ID.";
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                return "Data not Deleted. Error : " + ex;
+            }
+            return "Data deleted Successfully...!";
+        }
+        public async Task<string> UpdateData(TestModel testmodel)
+        {
+            try
+            {
+                var modeldata = await _testContext.testdata.FindAsync(testmodel.Id);
+                if (modeldata != null)
+                {
+                    modeldata.Name = testmodel.Name;
+                    modeldata.Id = testmodel.Id;
+                    await _testContext.SaveChangesAsync();
+                }
+                else
+                {
+                    return "Please enter proper ID. Data is not available for this ID.";
+                }
+
+            }
+            catch (Exception ex)
+            {
+                return "Data not Updated. Error : " + ex;
+            }
+            return "Data updated Successfully...!";
         }
     }
 }
