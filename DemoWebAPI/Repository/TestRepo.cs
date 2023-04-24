@@ -1,11 +1,13 @@
 ﻿using DemoWebAPI.DataLayer;
 using DemoWebAPI.Models;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace DemoWebAPI.Repository
@@ -18,9 +20,13 @@ namespace DemoWebAPI.Repository
             _testContext = context;
         }
 
-        public async Task<List<TestModel>> GetAllData()
+        public async Task<(List<TestModel>,int)> GetAllData(int pagenumber = 1, int pageSize = 5)
         {
-            return await _testContext.testdata.Select(x => new TestModel { Id = x.Id, Name = x.Name}).ToListAsync();
+            //return await _testContext.testdata.Select(x => new TestModel { Id = x.Id, Name = x.Name, Age = x.Age, GenderID = x.GenderID }).ToListAsync();
+            var totalrecords = await _testContext.testdata.CountAsync();
+            var skipRecords = (pagenumber - 1) * pageSize;
+            var records = await _testContext.testdata.Skip(skipRecords).Take(pageSize).ToListAsync();
+            return (records, totalrecords);
         }
         public string GetAllDataByName(string name)
         {
@@ -28,71 +34,67 @@ namespace DemoWebAPI.Repository
         }        
         public async Task<TestModel> GetAllDataById(int id)
         {
-            return await _testContext.testdata.Where(x => x.Id == id).Select(x => new TestModel { Id = x.Id, Name = x.Name }).FirstOrDefaultAsync();
+            return await _testContext.testdata.Where(x => x.Id == id).Select(x => new TestModel { Id = x.Id, Name = x.Name, Age = x.Age, GenderID = x.GenderID }).FirstOrDefaultAsync();
         }
-        public async Task<string> InsertAllData(TestModel test)
+        public async Task<TestModel> InsertAllData(TestModel test)
         {
             var testData = new TestModel()
             {
                 Name = test.Name,
+                Age = test.Age,
+                GenderID = test.GenderID,
             };
-            try
-            {
-                _testContext.testdata.Add(testData);
-                await _testContext.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                return "Data not Inserted. Error : " + ex;
-            }
-            return "Data inserted Successfully...!";                
+            _testContext.testdata.Add(testData);
+            await _testContext.SaveChangesAsync();
+            return test;
         }
         
-        public async Task<string> DeleteDataById(int id)
+        public async Task<TestModel> DeleteDataById(int id)
         {
-            try
+            var modeldata = await _testContext.testdata.FindAsync(id);
+            if (modeldata != null)
             {
-                var modeldata = await _testContext.testdata.FindAsync(id);
-                if (modeldata != null)
-                {
-                    var data = await _testContext.testdata.Where(x => x.Id == id).Select(x => new TestModel { Id = x.Id, Name = x.Name }).FirstOrDefaultAsync();
-                    _testContext.testdata.Remove(data);
-                    await _testContext.SaveChangesAsync();
-                }
-                else
-                {
-                    return "Please enter proper ID. Data is not available for this ID.";
-                }
-                
+                //var data = await _testContext.testdata.Where(x => x.Id == id).Select(x => new TestModel { Id = x.Id, Name = x.Name, Age = x.Age, Gender = x.Gender}).FirstOrDefaultAsync();
+                _testContext.testdata.Remove(modeldata);
+                await _testContext.SaveChangesAsync();
+                return modeldata;
             }
-            catch (Exception ex)
+            else
             {
-                return "Data not Deleted. Error : " + ex;
+                return modeldata;
             }
-            return "Data deleted Successfully...!";
         }
-        public async Task<string> UpdateData(TestModel testmodel)
+        public async Task<(TestModel,bool)> UpdateData(TestModel testmodel)
         {
-            try
+            var modeldata = await _testContext.testdata.FindAsync(testmodel.Id); //To check whether data is available or not
+            if (modeldata != null)
             {
-                var modeldata = await _testContext.testdata.FindAsync(testmodel.Id);
-                if (modeldata != null)
-                {
-                    modeldata.Name = testmodel.Name;
-                    modeldata.Id = testmodel.Id;
-                    await _testContext.SaveChangesAsync();
-                }
-                else
-                {
-                    return "Please enter proper ID. Data is not available for this ID.";
-                }
+                modeldata.Id = testmodel.Id;
+                modeldata.Name = testmodel.Name;
+                modeldata.Age = testmodel.Age;
+                modeldata.GenderID = testmodel.GenderID;
+                await _testContext.SaveChangesAsync();
+                return (modeldata,true);
+            }
+            else
+            {
+                return (modeldata,false);
+            }
+        }
 
-            }
-            catch (Exception ex)
+        public async Task<TestModel> UpdateDataPatch(int id, JsonPatchDocument testmodel)
+        {
+            var modeldata = await _testContext.testdata.FindAsync(id); //To check whether data is available or not
+            if (modeldata != null)
             {
-                return "Data not Updated. Error : " + ex;
+                testmodel.ApplyTo(modeldata);
+                await _testContext.SaveChangesAsync();
+                return modeldata;
             }
-            return "Data updated Successfully...!";
+            else
+            {
+                return modeldata;
+            }
         }
     }
 }
